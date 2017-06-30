@@ -56,9 +56,10 @@ BYTE *readLength(int64_t length,FILE *f);
 BLOCKFILE *getBlockFile(FILE *f);
 BLOCK *getBlock(FILE *f);
 BLOCKHEADER *getBlockHeader(FILE *f);
+TXINFO *getTxInfo(FILE *f);
 TX *getTx(FILE *f);
-TXINPUT *getTxInput(FILE *f);
-TXOUTPUT *getTxOutput(FILE *f);
+void getTxInput(FILE *f,TXINPUT *input);
+void getTxOutput(FILE *f,TXOUTPUT *output);
 int main(int argc,char **args)
 { 
   FILE *f=fopen(*(args+1),"rb");
@@ -95,78 +96,9 @@ BYTE *readLength(int64_t length,FILE *f){
 }
 
 BLOCK *getBlock(FILE *f){
-  
-  
-  // printf("======block header======\n");
-  // fread(&block->blockheader,80,1,f);
-  // BLOCKHEADER blockheader=block->blockheader;
-  // printf("version:%d\n",*((int*)blockheader.version) );
-
-  // printf("previousHash:");
-  // for(int i=31 ; i>=0 ; i--){
-  //   printf("%02x",blockheader.previousHash[i]);
-  // }
-  // printf("\nmerkleHash:");
-  // for(int i=31 ; i>=0 ; i--){
-  //   printf("%02x",blockheader.merkleHash[i]);
-  // }
-  // printf("\n");
-  // printf("timestamp:%d\n",(*(int*)blockheader.timestamp) );
-  // printf("bits:%x(%d)\n",(*(int*)blockheader.bits),(*(int*)blockheader.bits) );
-  // printf("nonce:%u\n",(*(unsigned int*)blockheader.nonce) );
-  
   BLOCK *block=malloc(sizeof(BLOCK));
   block->blockheader=getBlockHeader(f);
-  block->blockbody=malloc(sizeof(TXINFO));
-  block->blockbody->txcount=varint(f);
-  printf("========tx=========\n");
-  printf("tx count:%lld\n", decodeVarint(block->blockbody->txcount) ) ;
-  
-  block->blockbody->txs=malloc(sizeof(TX)*(*(int *)(*(block->blockbody)).txcount) );
-
-  fread( &(block->blockbody->txs[0]),4,1,f);
-  printf("tx version:%d\n", *(block->blockbody->txs[0]).version ) ;
-
-  block->blockbody->txs[0].numinputs=varint(f);
-  printf("tx input count:%lld\n",decodeVarint(block->blockbody->txs[0].numinputs) );
-  printf("========tx input=========\n");
-  printf("previous_output_hash:");
-  block->blockbody->txs[0].inputs=malloc(sizeof(TXINPUT)*(*(int *)(block->blockbody->txs[0].numinputs)) );
-  fread(block->blockbody->txs[0].inputs->previous_output_hash,32,1,f);
-  for(int i=31 ; i>=0 ; i--){
-    printf("%02x",block->blockbody->txs[0].inputs->previous_output_hash[i]);
-  }
-  printf("\n");
-  fread(block->blockbody->txs[0].inputs->previous_output_index,4,1,f);
-  printf("previous_output_index:%ld\n",*(int *)(block->blockbody->txs[0].inputs->previous_output_index));
-  block->blockbody->txs[0].inputs->script_length=varint(f);
-  printf("script_lenght:%lld\n",decodeVarint(block->blockbody->txs[0].inputs->script_length));
-  block->blockbody->txs[0].inputs->signature_script=readLength(decodeVarint(block->blockbody->txs[0].inputs->script_length),f);
-  printf("script:");
-  for(int i=0;i<*(int *)(block->blockbody->txs[0].inputs->script_length);i++)
-  {
-    printf("%02x",block->blockbody->txs[0].inputs->signature_script[i]);
-  }
-  printf("\n");
-  fread( block->blockbody->txs[0].inputs->sequence,4,1,f);
-  printf("sequence:%ld\n",*(int *)block->blockbody->txs[0].inputs->sequence);
-  printf("========tx output========\n");
-  block->blockbody->txs[0].numoutputs=varint(f);
-  printf("tx output count:%lld\n",decodeVarint(block->blockbody->txs[0].numoutputs) );
-  block->blockbody->txs[0].outputs=malloc(sizeof(TXOUTPUT)*(*(int *)(block->blockbody->txs[0].numoutputs)) );
-  /////////////////
-  fread(block->blockbody->txs[0].outputs->value,8,1,f);
-  printf("value:%lld\n",*(long long int *)block->blockbody->txs[0].outputs->value);
-  block->blockbody->txs[0].outputs->pk_script_length=varint(f);
-  printf("pk_script_length:%lld\n",decodeVarint(block->blockbody->txs[0].outputs->pk_script_length) );
-  block->blockbody->txs[0].outputs->pk_script=readLength(decodeVarint(block->blockbody->txs[0].outputs->pk_script_length),f);
-  printf("script");
-  for(int i=0;i<*(int *)block->blockbody->txs[0].outputs->pk_script_length;i++)
-  {
-    printf("%02x",block->blockbody->txs[0].outputs->pk_script[i]);
-  }
-  printf("\n");
-  //////////////////
+  block->blockbody=getTxInfo(f);
   
   
   return block;
@@ -203,4 +135,73 @@ BLOCKFILE *getBlockFile(FILE *f){
   fread(blockfile->space,8,1,f);
   printf("%d\n",*(int *)blockfile->space);
   return blockfile;
+}
+
+TXINFO *getTxInfo(FILE *f){
+  TXINFO *blockbody=malloc(sizeof(TXINFO));
+  blockbody=malloc(sizeof(TXINFO));
+  blockbody->txcount=varint(f);
+  printf("========tx=========\n");
+  printf("tx count:%lld\n", decodeVarint(blockbody->txcount) ) ;
+  blockbody->txs=malloc(sizeof(TX)*(*(int *)blockbody->txcount) );
+
+  for (int i=0;i<*(int *)blockbody->txcount;i++){
+    fread( &(blockbody->txs[i]),4,1,f);
+    printf("tx version:%d\n", blockbody->txs[i].version ) ;
+
+    blockbody->txs[i].numinputs=varint(f);
+    printf("tx input count:%lld\n",decodeVarint(blockbody->txs[i].numinputs) );
+    printf("========tx input=========\n");
+    
+    blockbody->txs[i].inputs=malloc(sizeof(TXINPUT)*(*(int *)(blockbody->txs[i].numinputs)) );
+    getTxInput(f,&blockbody->txs[i].inputs);
+
+    printf("========tx output========\n");
+    blockbody->txs[i].numoutputs=varint(f);
+    printf("tx output count:%lld\n",decodeVarint(blockbody->txs[i].numoutputs) );
+    blockbody->txs[i].outputs=malloc(sizeof(TXOUTPUT)*(*(int *)(blockbody->txs[i].numoutputs)) );
+    getTxOutput(f,&blockbody->txs[i].outputs);
+  }
+  return blockbody;
+}
+
+
+void getTxInput(FILE *f,TXINPUT *input){
+  printf("========tx input=========\n");
+  printf("previous_output_hash:");
+  fread(input->previous_output_hash,32,1,f);
+  for(int i=31 ; i>=0 ; i--){
+    printf("%02x",input->previous_output_hash[i]);
+  }
+  printf("\n");
+  fread(input->previous_output_index,4,1,f);
+  printf("previous_output_index:%ld\n",*(int *)(input->previous_output_index));
+  input->script_length=varint(f);
+  printf("script_lenght:%lld\n",decodeVarint(input->script_length));
+  input->signature_script=readLength(decodeVarint(input->script_length),f);
+  printf("script:");
+  for(int i=0;i<*(int *)(input->script_length);i++)
+  {
+    printf("%02x",input->signature_script[i]);
+  }
+  printf("\n");
+  fread( input->sequence,4,1,f);
+  printf("sequence:%ld\n",*(int *)input->sequence);
+  
+}
+
+void getTxOutput(FILE *f,TXOUTPUT *output){
+  printf("========tx output========\n");
+  /////////////////
+  fread(output->value,8,1,f);
+  printf("value:%lld\n",*(long long int *)output->value);
+  output->pk_script_length=varint(f);
+  printf("pk_script_length:%lld\n",decodeVarint(output->pk_script_length) );
+  output->pk_script=readLength(decodeVarint(output->pk_script_length),f);
+  printf("script");
+  for(int i=0;i<*(int *)output->pk_script_length;i++)
+  {
+    printf("%02x",output->pk_script[i]);
+  }
+  printf("\n");
 }
