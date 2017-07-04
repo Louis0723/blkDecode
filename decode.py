@@ -1,17 +1,4 @@
 import sys
-# BLOCKFILE *getBlockFile(FILE *f){
-#   BLOCKFILE *blockfile=malloc(sizeof(BLOCKFILE));
-#   blockfile->block=malloc(sizeof(BLOCK));
-#   fread(blockfile,8,1,f);
-#   //printf("magic value:%x\n",*((int*)blockfile->magic));
-#   //printf("blocksize:%d bytes\n",*((int*)blockfile->blocksize));
-#   blockfile->block=getBlock(f);
-  
-#   if(feof(f)!=EOF)
-#   fread(blockfile->space,4,1,f);
-#   //printf("%x\n",*(char *)blockfile->space);
-#   return blockfile;
-# }
 
 class varint:
         def __init__(self,handle):
@@ -149,7 +136,7 @@ class BlockFile:
 if __name__=="__main__":
     
     block=BlockFile(sys.argv[1])
-    for i in range(182):
+    for i in range(2732):
         block.getBlockFile()
     print repr(block)
     

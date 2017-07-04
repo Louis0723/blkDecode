@@ -31,11 +31,13 @@ typedef struct TX{
   BYTE *numoutputs;
   TXOUTPUT *outputs;
   BYTE locktime;
+  BYTE space[4];
 }TX;
 
 typedef struct TXINFO{
   BYTE *txcount;
   TX   *txs;
+  
 }TXINFO;
 
 typedef struct BLOCK{
@@ -47,7 +49,6 @@ typedef struct BLOCKFILE{
   BYTE magic[4];
   BYTE blocksize[4];
   BLOCK *block;
-  BYTE space[4];
 }BLOCKFILE;
 
 BYTE* varint(FILE *f);
@@ -72,7 +73,6 @@ int main(int argc,char **args)
     blockfile=getBlockFile(f);
     showBlockFile(blockfile);
     printf("\nblock:%lld",i);
-    printf("\neof:%d\n",feof(f));
   }
   
 
@@ -116,7 +116,7 @@ void showBlockFile(BLOCKFILE *blockfile){
       for(int k=0;k<decodeVarint(blockfile->block->blockbody->txs[i].outputs[j].pk_script_length);k++)printf("%02x",blockfile->block->blockbody->txs[i].outputs[j].pk_script[k]);
       printf("\n");
     }
-    printf("space:%x\n",*(int *)blockfile->space);
+    printf("space:%x\n",*(int *)blockfile->block->blockbody->txs[i].space);
     
   }
   
@@ -185,9 +185,6 @@ BLOCKFILE *getBlockFile(FILE *f){
   //printf("blocksize:%d bytes\n",*((int*)blockfile->blocksize));
   blockfile->block=getBlock(f);
   
-  if(feof(f)!=EOF)
-  fread(blockfile->space,4,1,f);
-  //printf("%x\n",*(char *)blockfile->space);
   return blockfile;
 }
 
@@ -217,7 +214,9 @@ TXINFO *getTxInfo(FILE *f){
     for(int j=0;j<decodeVarint(blockbody->txs[i].numoutputs);j++){
       getTxOutput(f,&blockbody->txs[i].outputs[j]);
     }
+    fread(&blockbody->txs[i].space ,4,1,f);
   }
+  
   return blockbody;
 }
 
